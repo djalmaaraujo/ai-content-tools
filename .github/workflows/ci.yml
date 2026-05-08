@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  api:
+    name: API checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker compose build api
+
+      - name: Unit tests
+        run: docker compose run --rm api npm test
+
+      - name: API e2e tests
+        run: docker compose run --rm api npm run test:e2e
+
+      - name: Lint
+        run: docker compose run --rm api npm run lint
+
+      - name: Typecheck
+        run: docker compose run --rm api npm run typecheck
+

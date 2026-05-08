@@ -197,8 +197,24 @@ class FakeLlmProvider extends StructuredLlmProvider {
           uncertainty_notes: [],
         },
         recommendations: {
-          quick_wins: [],
-          strategic: [],
+          quick_wins: [
+            {
+              action: 'Add Organization and WebSite JSON-LD.',
+              impact: 'Improves entity understanding.',
+              effort: 'low',
+              category: 'structured_data',
+              supporting_findings: ['Structured data is missing.'],
+            },
+          ],
+          strategic: [
+            {
+              action: 'Publish cite-worthy content with clear evidence.',
+              impact: 'Improves LLM citation readiness.',
+              effort: 'high',
+              category: 'content',
+              supporting_findings: ['Content needs stronger evidence.'],
+            },
+          ],
           nice_to_have: [],
         },
       },
@@ -242,23 +258,7 @@ describe('Analyze API', () => {
   });
 
   it('starts an analysis and eventually returns a final report', async () => {
-    const start = await request(app.getHttpServer())
-      .post('/analyze')
-      .send({ url: 'example.com/blog/post' })
-      .expect(202);
-
-    expect(start.body.analysisId).toEqual(expect.any(String));
-
-    let statusResponse = await request(app.getHttpServer())
-      .get(`/analyze/${start.body.analysisId}`)
-      .expect(200);
-
-    for (let attempt = 0; attempt < 20 && statusResponse.body.status !== 'done'; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 25));
-      statusResponse = await request(app.getHttpServer())
-        .get(`/analyze/${start.body.analysisId}`)
-        .expect(200);
-    }
+    const statusResponse = await startAndWaitForDone(app);
 
     expect(statusResponse.body).toMatchObject({
       url: 'https://example.com/blog/post',
@@ -271,4 +271,43 @@ describe('Analyze API', () => {
       },
     });
   });
+
+  it('renders a Tailwind-backed HTML report for a completed analysis', async () => {
+    const statusResponse = await startAndWaitForDone(app);
+    const analysisId = statusResponse.body.id;
+
+    const report = await request(app.getHttpServer())
+      .get(`/analyze/${analysisId}/report`)
+      .expect(200)
+      .expect('content-type', /text\/html/);
+
+    expect(report.text).toContain('https://cdn.tailwindcss.com');
+    expect(report.text).toContain('AI SEO Report');
+    expect(report.text).toContain('https://example.com/blog/post');
+    expect(report.text).toContain('64');
+    expect(report.text).toContain('needs improvement');
+    expect(report.text).toContain('Add Organization and WebSite JSON-LD.');
+  });
 });
+
+async function startAndWaitForDone(app: INestApplication): Promise<request.Response> {
+  const start = await request(app.getHttpServer())
+    .post('/analyze')
+    .send({ url: 'example.com/blog/post' })
+    .expect(202);
+
+  expect(start.body.analysisId).toEqual(expect.any(String));
+
+  let statusResponse = await request(app.getHttpServer())
+    .get(`/analyze/${start.body.analysisId}`)
+    .expect(200);
+
+  for (let attempt = 0; attempt < 20 && statusResponse.body.status !== 'done'; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    statusResponse = await request(app.getHttpServer())
+      .get(`/analyze/${start.body.analysisId}`)
+      .expect(200);
+  }
+
+  return statusResponse;
+}

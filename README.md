@@ -31,6 +31,7 @@ Included:
 - Versioned AI bot registry.
 - OpenAI Responses API provider with Structured Outputs.
 - Zod validation for all LLM results.
+- Server-rendered HTML report endpoint.
 - Unit and API e2e tests.
 
 Not included yet:
@@ -156,6 +157,12 @@ Response:
 
 Returns the current analysis record, including progress, final result, or stage error.
 
+### `GET /analyze/:id/report`
+
+Returns a server-rendered HTML report for completed analyses. The JSON API remains the source of truth; this endpoint is only a human-readable view.
+
+The report uses Tailwind via CDN for now, so no separate frontend build is required.
+
 ## URL Safety
 
 The analyzer accepts domain hostnames only. IP literals are rejected.
@@ -201,7 +208,7 @@ docker compose run --rm api npm run lint
 docker compose run --rm api npm run typecheck
 ```
 
-No branch should be pushed unless these checks pass.
+No branch may be pushed unless the entire suite above passes locally. Do not skip a failing check because the change seems unrelated.
 
 ## Architecture
 
@@ -254,6 +261,8 @@ docker compose run --rm api npm run lint
 docker compose run --rm api npm run typecheck
 ```
 
+The same rule applies before every push: all checks must be green.
+
 Use Conventional Commits:
 
 - `feat:`
@@ -268,4 +277,3 @@ Use Conventional Commits:
 ## License
 
 MIT. See [LICENSE](LICENSE).
-

@@ -114,6 +114,28 @@ Returns the current analysis record.
 - `done`: final report available.
 - `error`: pipeline failed.
 
+## `GET /analyze/:id/report`
+
+Returns a human-readable HTML report for completed analyses.
+
+This endpoint does not replace the JSON API. `GET /analyze/:id` remains the canonical machine-readable response.
+
+### Behavior
+
+- Unknown id returns `404`.
+- Existing analysis that is not `done` returns `409`.
+- Completed analysis returns `200` with `content-type: text/html`.
+- The MVP report uses Tailwind CDN and does not require a separate frontend build.
+
+### Report Content
+
+- URL and executive summary.
+- Final score and classification.
+- Category scores.
+- Strengths, weaknesses, and uncertainty notes.
+- Quick wins, strategic recommendations, and nice-to-have recommendations.
+- Analysis metadata including bot registry version.
+
 ## Error Responses
 
 - `400 Bad Request`: invalid URL or blocked target.

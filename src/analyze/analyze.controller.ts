@@ -1,7 +1,9 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   NotFoundException,
@@ -11,6 +13,7 @@ import {
 import { AnalyzeService } from './analyze.service';
 import { AnalysisStore } from './analysis.store';
 import { StartAnalysisDto } from './dto/start-analysis.dto';
+import { renderAnalysisReport } from './report.renderer';
 
 @Controller('analyze')
 export class AnalyzeController {
@@ -26,6 +29,19 @@ export class AnalyzeController {
     return { analysisId: id };
   }
 
+  @Get(':id/report')
+  @Header('content-type', 'text/html; charset=utf-8')
+  report(@Param('id') id: string): string {
+    const record = this.store.get(id);
+    if (!record) {
+      throw new NotFoundException();
+    }
+    if (record.status !== 'done' || !record.result) {
+      throw new ConflictException('Analysis report is not ready yet');
+    }
+    return renderAnalysisReport(record);
+  }
+
   @Get(':id')
   status(@Param('id') id: string) {
     const record = this.store.get(id);
@@ -35,4 +51,3 @@ export class AnalyzeController {
     return record;
   }
 }
-

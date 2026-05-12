@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { fetch, type Response as UndiciResponse } from 'undici';
+import { fetch, type Dispatcher, type Response as UndiciResponse } from 'undici';
 import { AI_BOT_REGISTRY } from '../bots/ai-bot-registry';
 import { HtmlParseResult, parseHtml } from '../parsers/html.parser';
 import { extractJsonLd } from '../parsers/jsonld.parser';
@@ -9,6 +9,7 @@ import {
   assertPublicDnsResolution,
   normalizeAnalyzeUrl,
 } from '../../common/url-safety';
+import { buildDispatcher, pickUserAgent } from '../../common/http-client';
 
 export interface DeterministicResult {
   targetUrl: string;
@@ -73,7 +74,8 @@ interface FetchedText {
 export class DeterministicService {
   private readonly timeoutMs = Number(process.env.HTTP_TIMEOUT_MS ?? 10_000);
   private readonly maxBytes = Number(process.env.HTTP_MAX_BYTES ?? 2_000_000);
-  private readonly userAgent = 'AIContentToolsBot/0.1';
+  private readonly dispatcher: Dispatcher = buildDispatcher(process.env);
+  private requestCounter = 0;
 
   async run(targetUrl: string): Promise<DeterministicResult> {
     const normalized = normalizeAnalyzeUrl(targetUrl);
@@ -162,10 +164,13 @@ export class DeterministicService {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
+        const userAgent = pickUserAgent(process.env, this.requestCounter);
+        this.requestCounter += 1;
         const response = await fetch(current.targetUrl, {
           redirect: 'manual',
           signal: controller.signal,
-          headers: { 'user-agent': this.userAgent, accept: 'text/html, text/plain, */*' },
+          dispatcher: this.dispatcher,
+          headers: { 'user-agent': userAgent, accept: 'text/html, text/plain, */*' },
         });
         const headers = headersToRecord(response.headers);
         if (isRedirect(response.status)) {

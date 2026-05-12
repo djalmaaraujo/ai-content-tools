@@ -193,7 +193,24 @@ SYNTHESIZER_MODEL=gpt-5.4-mini
 HTTP_TIMEOUT_MS=10000
 ANALYSIS_TTL_MS=86400000
 REPORT_LANGUAGE=en
+HTTP_PROXY_URL=
+HTTPS_PROXY=
+USER_AGENT_POOL=
+ENABLE_WEB_SEARCH=true
 ```
+
+### Outbound proxy and User-Agent rotation
+
+To reduce the risk of being rate-limited or blocked when scanning many sites:
+
+- Set `HTTP_PROXY_URL` (or `HTTPS_PROXY`) to route deterministic fetches through an HTTP/HTTPS proxy. The OpenAI specialist calls are unaffected because they leave OpenAI's network, not yours.
+- Set `USER_AGENT_POOL` to a comma-separated list of User-Agent strings. The deterministic fetcher rotates through them per request. When unset it falls back to `AIContentToolsBot/0.1`.
+
+### Disabling OpenAI `web_search`
+
+The entity specialist normally calls OpenAI's `web_search` tool to look up Wikipedia, Wikidata, and authority mentions. That tool call is billed in addition to the model tokens.
+
+Set `ENABLE_WEB_SEARCH=false` to run a cheaper variant: the entity specialist still uses the LLM, but only reasons from the page's JSON-LD Organization schema, brand name, and domain. Brand-strength judgments will be lower confidence; the rest of the report is unchanged.
 
 Tests do not require `OPENAI_API_KEY`. Live analysis does.
 

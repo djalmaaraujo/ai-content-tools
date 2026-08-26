@@ -13,8 +13,11 @@ import {
 } from '../prompts/content-geo.prompt';
 import {
   ENTITY_STRATEGIST_SYSTEM,
+  ENTITY_STRATEGIST_SYSTEM_NO_WEB_SEARCH,
   buildEntityStrategistInput,
 } from '../prompts/entity-strategist.prompt';
+import { isWebSearchEnabled } from './web-search';
+import { LlmTool } from '../../llm/structured-llm.provider';
 import {
   TECHNICAL_AUDITOR_SYSTEM,
   buildTechnicalAuditorInput,
@@ -57,13 +60,18 @@ export class SpecialistService {
   }
 
   async runEntity(deterministic: DeterministicResult): Promise<EntityAudit> {
+    const webSearchEnabled = isWebSearchEnabled(process.env);
+    const system = webSearchEnabled
+      ? ENTITY_STRATEGIST_SYSTEM
+      : ENTITY_STRATEGIST_SYSTEM_NO_WEB_SEARCH;
+    const tools: LlmTool[] = webSearchEnabled ? ['web_search'] : [];
     return this.llm.runStructuredCall({
       model: process.env.SPECIALIST_MODEL_ENTITY ?? 'gpt-5.4-mini',
-      system: ENTITY_STRATEGIST_SYSTEM,
+      system,
       userMessage: buildEntityStrategistInput(deterministic),
       schemaName: 'EntityAudit',
       schema: EntityAuditSchema,
-      tools: ['web_search'],
+      tools,
       maxTokens: 4_000,
     });
   }
